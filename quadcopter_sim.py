@@ -26,7 +26,7 @@ import numpy as np
 from math import atan2, acos, asin
 # import pybullet for physics simulation
 import pybullet as p
-
+import pybullet_data
 # import Thread from threading to create threads
 # threads are parts of a program than run parallel to eachother
 # and are allowed to share data
@@ -282,6 +282,8 @@ Izz              = 0.004
 
 # creation of pyqtgraph 3D graphics window
 # with a ground plane and coordinate frame (global axis)
+#Actual code issues error. "QWidget: Must construct a QApplication before a QWidget"
+app = QtGui.QApplication([]) 
 window = gl.GLViewWidget()
 window.show()
 window.setWindowTitle('Bullet Physics example')
@@ -299,6 +301,7 @@ p.setTimeStep(Tsample_physics)
 # disable real-time simulation, we want to step through the
 # physics ourselves with p.stepSimulation()
 p.setRealTimeSimulation(0)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
 planeId = p.loadURDF("plane.urdf",[0,0,0],p.getQuaternionFromEuler([0,0,0]))
 quadcopterId = p.loadURDF("quadrotor.urdf",[0,0,1],p.getQuaternionFromEuler([0,0,0]))
 
