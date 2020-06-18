@@ -15,9 +15,9 @@
 # import pyqtgraph for the fast 3D graphics using these lines:
 # please first install pyqtgraph and OpenGL using
 # pip install OpenGL OpenGL_accelerate pyqtgraph
-from pyqtgraph.Qt import QtCore, QtGui
-import pyqtgraph as pg
-import pyqtgraph.opengl as gl
+# from pyqtgraph.Qt import QtCore, QtGui
+# import pyqtgraph as pg
+# import pyqtgraph.opengl as gl
 # import numpy for vector calculations
 import numpy as np
 # import trigonometric functions from math
@@ -49,7 +49,8 @@ import time
 # quaternion2axis_angle and quaternion2rotation_matrix are two
 # functions to convert a quaternion to an axis-angle and a rotation 
 # matrix, which are all different ways to describe an orientation.
-from util import bullet2pyqtgraph, quaternion2axis_angle, quaternion2rotation_matrix
+#from util import bullet2pyqtgraph, quaternion2axis_angle, quaternion2rotation_matrix
+from util import quaternion2axis_angle, quaternion2rotation_matrix
 
 ######################################################################################
 # definition of PID controller class
@@ -71,11 +72,11 @@ class PIDcontroller:
     # CHANGE THIS: the current definition of the function calc_control
     # is not correct, and should be changed to calculate a PID control action
     def calc_control(self,e_now):
-        e_int = 0
-        de    = 0
+        e_int = self.e_int + e_now
+        de    = (e_now-self.e_prev) * self.inv_dT
 
         # PID control signal: Kp * e_now + Ki * e_integral + Kd * e_derivative
-        u     = 0
+        u     = self.Kp*e_now + self.Ki * e_int + self.Kd * de
 
         # update memory (state) of PIDcontroller:
         self.e_prev = e_now   # next time, now is previous
@@ -104,8 +105,10 @@ class quadcopter_control:
         self.yaw_ctrl   = PIDcontroller(Kp[5],Ki[5],Kd[5],Tsample_control,0,0)
 
         # position (x, y, z), and rpy (roll, pitch, yaw) reference:
-        self.ref_pos = np.zeros(3)
-        self.ref_rpy = np.zeros(3)
+        # self.ref_pos = np.zeros(3)
+        # self.ref_rpy = np.zeros(3)
+        self.ref_pos = np.array([1.0,0.0,2.0])
+        self.ref_rpy = np.array([0.0,0.0,0.0])
         # offset op roll,pitch,yaw referentie ten behoeve van tunen:
         self.ref_rpy_offset = np.zeros(3)
 
@@ -119,6 +122,7 @@ class quadcopter_control:
         self.force_act4 = 0.
         # moment ten behoeve van yaw-control:
         self.moment_yaw = 0.
+        
 
         # if true continue simulations
         self.sim    = True
@@ -216,17 +220,19 @@ class quadcopter_control:
 # (no need to change this)
 def update_physics(delay,quadcopterId,quadcopter_controller):
     while quadcopter_controller.sim:
-        start = time.perf_counter();
+        #start = time.perf_counter()
+        #start = time.clock()
 
         # the controllers are evaluated at a slower rate, only once in the 
         # control_subsample times the controller is evaluated
-        if quadcopter_controller.sample == 0:
-            quadcopter_controller.sample = control_subsample
-            pos_meas,quaternion_meas = p.getBasePositionAndOrientation(quadcopterId)
-            force_act1,force_act2,force_act3,force_act4,moment_yaw = quadcopter_controller.update_control(pos_meas,quaternion_meas)
-        else:
-            quadcopter_controller.sample -= 1
-
+        # if quadcopter_controller.sample == 0:
+        #     quadcopter_controller.sample = control_subsample
+        #     pos_meas,quaternion_meas = p.getBasePositionAndOrientation(quadcopterId)
+        #     force_act1,force_act2,force_act3,force_act4,moment_yaw = quadcopter_controller.update_control(pos_meas,quaternion_meas)
+        # else:
+        #     quadcopter_controller.sample -= 1
+        pos_meas,quaternion_meas = p.getBasePositionAndOrientation(quadcopterId)
+        force_act1,force_act2,force_act3,force_act4,moment_yaw = quadcopter_controller.update_control(pos_meas,quaternion_meas)
         # apply forces/moments from controls etc:
         # (do this each time, because forces and moments are reset to zero after a stepSimulation())
         p.applyExternalForce(quadcopterId,-1,force_act1,[arm_length,0.,0.], p.LINK_FRAME)
@@ -241,24 +247,24 @@ def update_physics(delay,quadcopterId,quadcopter_controller):
         p.stepSimulation()
 
         # delay than repeat
-        calc_time = time.perf_counter()-start
-        if ( calc_time > 1.2*delay ):
-            #print("Time to update physics is {} and is more than 20% of the desired update time ({}).".format(calc_time,delay))
-            pass
-        else:
-            # print("calc_time = ",calc_time)
-            while (time.perf_counter()-start < delay):
-                time.sleep(delay/10)
+#         calc_time = time.perf_counter()-start
+#         if ( calc_time > 1.2*delay ):
+#             #print("Time to update physics is {} and is more than 20% of the desired update time ({}).".format(calc_time,delay))
+#             pass
+#         else:
+#             # print("calc_time = ",calc_time)
+#             while (time.perf_counter()-start < delay):
+#                 time.sleep(delay/10)
 
-# this function is to update the window (no need to change this)
-def update_window():
-    global quadcopterId, quadcopterMesh, w
-    pos_meas,quat_meas = p.getBasePositionAndOrientation(quadcopterId)
-    angle,x,y,z = quaternion2axis_angle(quat_meas)
-    quadcopterMesh.setTransform(np.eye(4).flatten())
-    quadcopterMesh.rotate(np.degrees(angle),x,y,z,local=True)
-    quadcopterMesh.translate(pos_meas[0],pos_meas[1],pos_meas[2])
-    window.update()
+# # this function is to update the window (no need to change this)
+# def update_window():
+#     global quadcopterId, quadcopterMesh, w
+#     pos_meas,quat_meas = p.getBasePositionAndOrientation(quadcopterId)
+#     angle,x,y,z = quaternion2axis_angle(quat_meas)
+#     quadcopterMesh.setTransform(np.eye(4).flatten())
+#     quadcopterMesh.rotate(np.degrees(angle),x,y,z,local=True)
+#     quadcopterMesh.translate(pos_meas[0],pos_meas[1],pos_meas[2])
+#     window.update()
 
 ################################################################################
 # The above is just definition of classes and functions
@@ -267,8 +273,8 @@ def update_window():
 
 # Definition of update times (in sec.) for quadcopter physics, controller and 
 # window refreshing
-Tsample_physics    = 0.0001
-control_subsample  = 50
+Tsample_physics    = 0.01
+control_subsample  = 1
 Tsample_control    = control_subsample * Tsample_physics
 Tsample_window     = 0.02
 
@@ -283,37 +289,37 @@ Izz              = 0.004
 # creation of pyqtgraph 3D graphics window
 # with a ground plane and coordinate frame (global axis)
 #Actual code issues error. "QWidget: Must construct a QApplication before a QWidget"
-app = QtGui.QApplication([]) 
-window = gl.GLViewWidget()
-window.show()
-window.setWindowTitle('Bullet Physics example')
-grid = gl.GLGridItem()
-window.addItem(grid)
-global_axis = gl.GLAxisItem()
-global_axis.updateGLOptions({'glLineWidth':(4,)})
-window.addItem(global_axis)
-window.update()
+# app = QtGui.QApplication([]) 
+# window = gl.GLViewWidget()
+# window.show()
+# window.setWindowTitle('Bullet Physics example')
+# grid = gl.GLGridItem()
+# window.addItem(grid)
+# global_axis = gl.GLAxisItem()
+# global_axis.updateGLOptions({'glLineWidth':(4,)})
+# window.addItem(global_axis)
+# window.update()
 
 # configure pybullet and load plane.urdf and quadcopter.urdf
-physicsClient = p.connect(p.DIRECT)  # pybullet only for computations no visualisation
+physicsClient = p.connect(p.GUI)  # pybullet only for computations no visualisation
 p.setGravity(0,0,-gravity)
 p.setTimeStep(Tsample_physics)
 # disable real-time simulation, we want to step through the
 # physics ourselves with p.stepSimulation()
 p.setRealTimeSimulation(0)
-p.setAdditionalSearchPath(pybullet_data.getDataPath())
-planeId = p.loadURDF("plane.urdf",[0,0,0],p.getQuaternionFromEuler([0,0,0]))
-quadcopterId = p.loadURDF("quadrotor.urdf",[0,0,1],p.getQuaternionFromEuler([0,0,0]))
+#p.setAdditionalSearchPath("~/Documents/research/quadcopter_sim/")
+planeId = p.loadURDF("quadcopter_sim/plane.urdf",[0,0,0],p.getQuaternionFromEuler([0,0,0]))
+quadcopterId = p.loadURDF("quadcopter_sim/quadrotor.urdf",[0,0,1],p.getQuaternionFromEuler([0,0,0]))
 
 # do a few steps to start simulation and let the quadcopter land safely
-for i in range(int(2/Tsample_physics)):
-    p.stepSimulation()
+# for i in range(int(2/Tsample_physics)):
+#     p.stepSimulation()
 
 # create a pyqtgraph mesh from the quadcopter to visualize
 # the quadcopter in the 3D pyqtgraph window
-quadcopterMesh = bullet2pyqtgraph(quadcopterId)[0]
-window.addItem(quadcopterMesh)
-window.update()
+# quadcopterMesh = bullet2pyqtgraph(quadcopterId)[0]
+# window.addItem(quadcopterMesh)
+# window.update()
 
 # Initialize PID controller gains:
 Kp = np.zeros(6)
@@ -322,26 +328,26 @@ Kd = np.zeros(6)
 
 # give them values:
 # x-y-z controlers:
-Kp[0] = 0
-Kp[1] = 0
-Kp[2] = 0
+Kp[0] = 0.001
+Kp[1] = 0.001
+Kp[2] = 0.04
 
-Kd[0] = 0
-Kd[1] = 0
-Kd[2] = 0
+Kd[0] = 0.1
+Kd[1] = 0.01
+Kd[2] = 0.025
 
 Ki[0] = 0
 Ki[1] = 0
 Ki[2] = 0
 
 # roll-pitch-yaw controlers (yaw is already prefilled):
-Kp[3] = 0
-Kp[4] = 0
-Kp[5] = 25.6
+Kp[3] = 0.1
+Kp[4] = 0.1
+Kp[5] = 0.000
 
-Kd[3] = 0
+Kd[3] = 0.01
 Kd[4] = 0
-Kd[5] = 1.28
+Kd[5] = 0.00
 
 Ki[3] = 0
 Ki[4] = 0
@@ -357,17 +363,19 @@ qcc = quadcopter_control(Kp,Ki,Kd)
 # completely in the background and we keep a python command line
 # which can be used to interact with the quadcopter
 # e.g. we can manually change setpoints and change control parameters
-thread_physics = Thread(target=update_physics,args=(Tsample_physics,quadcopterId,qcc))
-# start the thread:
-thread_physics.start()
 
+# thread_physics = Thread(target=update_physics,args=(Tsample_physics,quadcopterId,qcc))
+# # start the thread:
+# thread_physics.start()
+update_physics(Tsample_physics,quadcopterId,qcc)
 # the graphics window is updated every Tsample_window seconds
 # using a timer function from the Qt GUI part of pyqtgraph
 # this also runs in the background, but at a much lower speed than
 # the physics and control updates.
-timer_window = QtCore.QTimer()
-timer_window.timeout.connect(update_window)
-timer_window.start(int(1/Tsample_window))
+
+# timer_window = QtCore.QTimer()
+# timer_window.timeout.connect(update_window)
+# timer_window.start(int(1/Tsample_window))
 
 # END
 # Tips for using:
