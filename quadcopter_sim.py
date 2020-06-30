@@ -57,7 +57,7 @@ from util import quaternion2axis_angle, quaternion2rotation_matrix
 ######################################################################################
 class PIDcontroller:
     #construction of the object PIDcontroller:
-    def __init__(self,Kp,Ki,Kd,dT,e_prev,e_int):
+    def __init__(self, Kp, Ki, Kd, dT, e_prev, e_int):
         self.Kp = Kp         # proportional gain
         self.Ki = Ki         # integral gain
         self.Kd = Kd         # derivative gain
@@ -71,7 +71,7 @@ class PIDcontroller:
     # calculation of the PID control signal u and update of the items in memory
     # CHANGE THIS: the current definition of the function calc_control
     # is not correct, and should be changed to calculate a PID control action
-    def calc_control(self,e_now):
+    def calc_control(self, e_now):
         e_int = self.e_int + e_now
         de    = (e_now-self.e_prev) * self.inv_dT
 
@@ -91,24 +91,24 @@ class quadcopter_control:
     # function used to contruct quadcopter_control objects, PID controller
     # parameters Kp, Ki and Kd are 6-dimensional vectors for 
     # x-, y-, z-, pitch-, roll-, and yaw-controllers.
-    def __init__(self,Kp,Ki,Kd):
+    def __init__(self, Kp, Ki, Kd):
         global Tsample_control
         # controller along global x-, y- and z-axis
-        self.x_ctrl = PIDcontroller(Kp[0],Ki[0],Kd[0],Tsample_control,0,0)
-        self.y_ctrl = PIDcontroller(Kp[1],Ki[1],Kd[1],Tsample_control,0,0)
-        self.z_ctrl = PIDcontroller(Kp[2],Ki[2],Kd[2],Tsample_control,0,0)
+        self.x_ctrl = PIDcontroller(Kp[0], Ki[0], Kd[0], Tsample_control, 0, 0)
+        self.y_ctrl = PIDcontroller(Kp[1], Ki[1], Kd[1], Tsample_control, 0, 0)
+        self.z_ctrl = PIDcontroller(Kp[2], Ki[2], Kd[2], Tsample_control, 0, 0)
         # roll is rotation about quadcopters x-axis
         # pitch is rotation about quadcopters y-axis
         # yaw is rotation about quadcopters z-axis
-        self.roll_ctrl  = PIDcontroller(Kp[3],Ki[3],Kd[3],Tsample_control,0,0)
-        self.pitch_ctrl = PIDcontroller(Kp[4],Ki[4],Kd[4],Tsample_control,0,0)
-        self.yaw_ctrl   = PIDcontroller(Kp[5],Ki[5],Kd[5],Tsample_control,0,0)
+        self.roll_ctrl  = PIDcontroller(Kp[3], Ki[3], Kd[3], Tsample_control, 0, 0)
+        self.pitch_ctrl = PIDcontroller(Kp[4], Ki[4], Kd[4], Tsample_control, 0, 0)
+        self.yaw_ctrl   = PIDcontroller(Kp[5], Ki[5], Kd[5], Tsample_control, 0, 0)
 
         # position (x, y, z), and rpy (roll, pitch, yaw) reference:
         # self.ref_pos = np.zeros(3)
         # self.ref_rpy = np.zeros(3)
-        self.ref_pos = np.array([1.0,0.0,2.0])
-        self.ref_rpy = np.array([0.0,0.0,0.0])
+        self.ref_pos = np.array([0.0, 0.0, 2.0])
+        self.ref_rpy = np.array([0.0, 0.0, 0.0])
         # offset op roll,pitch,yaw referentie ten behoeve van tunen:
         self.ref_rpy_offset = np.zeros(3)
 
@@ -158,7 +158,7 @@ class quadcopter_control:
         sign_z =  np.sign(force_pos[2])
 
         # transform force to quadcopters coordinate frame
-        force_pos_local = np.dot(R_meas.T,force_pos.reshape(3,1)).reshape(3)
+        force_pos_local = np.dot(R_meas.T, force_pos.reshape(3, 1)).reshape(3)
         #  force_pos_local[2] = thrust, so for each actuator one quarter
         quarter_thrust = 0.25*force_pos_local[2]
 
@@ -166,7 +166,7 @@ class quadcopter_control:
         norm_F = np.linalg.norm(force_pos)
         # following equations only hold for yaw = 0!
         self.ref_rpy[0] = asin(-sign_z*force_pos[1]/norm_F)
-        self.ref_rpy[1] = atan2(sign_z*force_pos[0],sign_z*force_pos[2])
+        self.ref_rpy[1] = atan2(sign_z*force_pos[0], sign_z*force_pos[2])
         # setpoint for yaw = 0:
         self.ref_rpy[2] = 0.
         # to enhance robustness, do not let absolute reference angle be greater
@@ -203,10 +203,10 @@ class quadcopter_control:
 
         # apparantly the forces for applyExternalForce are not in LINK_FRAME, but the positions are
         # so transform forces in right direction (in world-space coordinates)
-        force_act1 = self.force_act1*R_meas[:,2]
-        force_act2 = self.force_act2*R_meas[:,2]
-        force_act3 = self.force_act3*R_meas[:,2]
-        force_act4 = self.force_act4*R_meas[:,2]
+        force_act1 = self.force_act1*R_meas[:, 2]
+        force_act2 = self.force_act2*R_meas[:, 2]
+        force_act3 = self.force_act3*R_meas[:, 2]
+        force_act4 = self.force_act4*R_meas[:, 2]
 
         #############################
         # end of math2 block        #
@@ -308,9 +308,11 @@ p.setTimeStep(Tsample_physics)
 # physics ourselves with p.stepSimulation()
 p.setRealTimeSimulation(0)
 #p.setAdditionalSearchPath("~/Documents/research/quadcopter_sim/")
-planeId = p.loadURDF("quadcopter_sim/plane.urdf",[0,0,0],p.getQuaternionFromEuler([0,0,0]))
-quadcopterId = p.loadURDF("quadcopter_sim/quadrotor.urdf",[0,0,1],p.getQuaternionFromEuler([0,0,0]))
-
+#planeId = p.loadURDF("plane.urdf",[0,0,0],p.getQuaternionFromEuler([0,0,0]))
+quadcopterId = p.loadURDF("quadrotor.urdf",[0,0,1],p.getQuaternionFromEuler([0,0,0]))
+#p.setAdditionalSearchPath(pybullet_data.getDataPath())
+planeId = p.loadURDF("plane.urdf",[0,0,0],p.getQuaternionFromEuler([0,0,0]))
+#planeId = p.loadURDF("plane.urdf")
 # do a few steps to start simulation and let the quadcopter land safely
 # for i in range(int(2/Tsample_physics)):
 #     p.stepSimulation()
@@ -326,19 +328,21 @@ Kp = np.zeros(6)
 Ki = np.zeros(6)
 Kd = np.zeros(6)
 
-# give them values:
+# give them values:osition) and quaternion_meas (measured
+    # orientation), the function returns the forces for the 4 actuators and
+    # the moment for the yaw-control
 # x-y-z controlers:
-Kp[0] = 0.001
-Kp[1] = 0.001
-Kp[2] = 0.04
+Kp[0] = 0.00
+Kp[1] = 0.00
+Kp[2] = 0.00
 
-Kd[0] = 0.1
-Kd[1] = 0.01
-Kd[2] = 0.025
+Kd[0] = 0.00
+Kd[1] = 0.00
+Kd[2] = 0.00
 
 Ki[0] = 0
 Ki[1] = 0
-Ki[2] = 0
+Ki[2] = 0.0000000
 
 # roll-pitch-yaw controlers (yaw is already prefilled):
 Kp[3] = 0.1
@@ -364,10 +368,10 @@ qcc = quadcopter_control(Kp,Ki,Kd)
 # which can be used to interact with the quadcopter
 # e.g. we can manually change setpoints and change control parameters
 
-# thread_physics = Thread(target=update_physics,args=(Tsample_physics,quadcopterId,qcc))
+thread_physics = Thread(target=update_physics,args=(Tsample_physics,quadcopterId,qcc))
 # # start the thread:
-# thread_physics.start()
-update_physics(Tsample_physics,quadcopterId,qcc)
+thread_physics.start()
+#update_physics(Tsample_physics,quadcopterId,qcc)
 # the graphics window is updated every Tsample_window seconds
 # using a timer function from the Qt GUI part of pyqtgraph
 # this also runs in the background, but at a much lower speed than
