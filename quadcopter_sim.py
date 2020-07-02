@@ -91,18 +91,18 @@ class quadcopter_control:
     # function used to contruct quadcopter_control objects, PID controller
     # parameters Kp, Ki and Kd are 6-dimensional vectors for 
     # x-, y-, z-, pitch-, roll-, and yaw-controllers.
-    def __init__(self, Kp, Ki, Kd):
+    def __init__(self, Kp, Ki, Kd, config):
         global Tsample_control
         # controller along global x-, y- and z-axis
-        self.x_ctrl = PIDcontroller(Kp[0], Ki[0], Kd[0], Tsample_control, 0, 0)
-        self.y_ctrl = PIDcontroller(Kp[1], Ki[1], Kd[1], Tsample_control, 0, 0)
-        self.z_ctrl = PIDcontroller(Kp[2], Ki[2], Kd[2], Tsample_control, 0, 0)
+        self.x_ctrl = PIDcontroller(Kp[0], Ki[0], Kd[0], config.Tsample_control, 0, 0)
+        self.y_ctrl = PIDcontroller(Kp[1], Ki[1], Kd[1], config.Tsample_control, 0, 0)
+        self.z_ctrl = PIDcontroller(Kp[2], Ki[2], Kd[2], config.Tsample_control, 0, 0)
         # roll is rotation about quadcopters x-axis
         # pitch is rotation about quadcopters y-axis
         # yaw is rotation about quadcopters z-axis
-        self.roll_ctrl  = PIDcontroller(Kp[3], Ki[3], Kd[3], Tsample_control, 0, 0)
-        self.pitch_ctrl = PIDcontroller(Kp[4], Ki[4], Kd[4], Tsample_control, 0, 0)
-        self.yaw_ctrl   = PIDcontroller(Kp[5], Ki[5], Kd[5], Tsample_control, 0, 0)
+        self.roll_ctrl  = PIDcontroller(Kp[3], Ki[3], Kd[3], config.Tsample_control, 0, 0)
+        self.pitch_ctrl = PIDcontroller(Kp[4], Ki[4], Kd[4], config.Tsample_control, 0, 0)
+        self.yaw_ctrl   = PIDcontroller(Kp[5], Ki[5], Kd[5], config.Tsample_control, 0, 0)
 
         # position (x, y, z), and rpy (roll, pitch, yaw) reference:
         # self.ref_pos = np.zeros(3)
@@ -137,7 +137,7 @@ class quadcopter_control:
     # In this function you can include gravity compensation, but no need to
     # change the function in other ways
     ##################################################################################
-    def update_control(self,pos_meas,quaternion_meas):
+    def update_control(self,pos_meas,quaternion_meas, config):
         global quadcopterId, gravity, mass
         R_meas   = quaternion2rotation_matrix(quaternion_meas)
         rpy_meas = p.getEulerFromQuaternion(quaternion_meas)
@@ -150,7 +150,7 @@ class quadcopter_control:
         force_pos[1] = self.y_ctrl.calc_control(self.error_pos[1])
         force_pos[2] = self.z_ctrl.calc_control(self.error_pos[2])
         # gravity compensation
-        force_pos[2] += gravity*mass
+        force_pos[2] += config.gravity*config.mass
 
         #############################
         # math1 block               #
@@ -194,7 +194,7 @@ class quadcopter_control:
         #############################
         # math2 block               #
         #############################
-        factor         = .5/arm_length
+        factor         = .5/config.arm_length
         self.force_act1 = quarter_thrust - factor*moments[1]
         self.force_act3 = quarter_thrust + factor*moments[1]
         self.force_act2 = quarter_thrust + factor*moments[0]
@@ -218,7 +218,7 @@ class quadcopter_control:
 # this function is repeatedly evaluated in a separate thread
 # and evualates the control-law and updates the physics
 # (no need to change this)
-def update_physics(delay,quadcopterId,quadcopter_controller):
+def update_physics(delay,quadcopterId,quadcopter_controller,config):
     while quadcopter_controller.sim:
         #start = time.perf_counter()
         #start = time.clock()
@@ -232,13 +232,13 @@ def update_physics(delay,quadcopterId,quadcopter_controller):
         # else:
         #     quadcopter_controller.sample -= 1
         pos_meas,quaternion_meas = p.getBasePositionAndOrientation(quadcopterId)
-        force_act1,force_act2,force_act3,force_act4,moment_yaw = quadcopter_controller.update_control(pos_meas,quaternion_meas)
+        force_act1,force_act2,force_act3,force_act4,moment_yaw = quadcopter_controller.update_control(pos_meas,quaternion_meas,config)
         # apply forces/moments from controls etc:
         # (do this each time, because forces and moments are reset to zero after a stepSimulation())
-        p.applyExternalForce(quadcopterId,-1,force_act1,[arm_length,0.,0.], p.LINK_FRAME)
-        p.applyExternalForce(quadcopterId,-1,force_act2,[0.,arm_length,0.], p.LINK_FRAME)
-        p.applyExternalForce(quadcopterId,-1,force_act3,[-arm_length,0.,0.],p.LINK_FRAME)
-        p.applyExternalForce(quadcopterId,-1,force_act4,[0.,-arm_length,0.],p.LINK_FRAME)
+        p.applyExternalForce(quadcopterId,-1,force_act1,[config.arm_length,0.,0.], p.LINK_FRAME)
+        p.applyExternalForce(quadcopterId,-1,force_act2,[0.,config.arm_length,0.], p.LINK_FRAME)
+        p.applyExternalForce(quadcopterId,-1,force_act3,[-config.arm_length,0.,0.],p.LINK_FRAME)
+        p.applyExternalForce(quadcopterId,-1,force_act4,[0.,-config.arm_length,0.],p.LINK_FRAME)
 
         # for the yaw-control:
         p.applyExternalTorque(quadcopterId,-1,[0.,0.,moment_yaw],p.LINK_FRAME)
@@ -271,106 +271,76 @@ def update_physics(delay,quadcopterId,quadcopter_controller):
 # Here actual python script for the simulation starts
 ################################################################################
 
-# Definition of update times (in sec.) for quadcopter physics, controller and 
-# window refreshing
-Tsample_physics    = 0.01
-control_subsample  = 1
-Tsample_control    = control_subsample * Tsample_physics
-Tsample_window     = 0.02
 
-# definition of number of constants: 
-gravity = 9.8
-# arm length, mass and moments of inertia of quadcopter
-arm_length       = 0.1
-mass             = 0.5
-Ixx = Iyy        = 0.0023
-Izz              = 0.004
+def startSimulation(configurations, qcc, quadcopterId):
+    # Definition of update times (in sec.) for quadcopter physics, controller and
+    # window refreshing
 
-# creation of pyqtgraph 3D graphics window
-# with a ground plane and coordinate frame (global axis)
-#Actual code issues error. "QWidget: Must construct a QApplication before a QWidget"
-# app = QtGui.QApplication([]) 
-# window = gl.GLViewWidget()
-# window.show()
-# window.setWindowTitle('Bullet Physics example')
-# grid = gl.GLGridItem()
-# window.addItem(grid)
-# global_axis = gl.GLAxisItem()
-# global_axis.updateGLOptions({'glLineWidth':(4,)})
-# window.addItem(global_axis)
-# window.update()
 
-# configure pybullet and load plane.urdf and quadcopter.urdf
-physicsClient = p.connect(p.GUI)  # pybullet only for computations no visualisation
-p.setGravity(0,0,-gravity)
-p.setTimeStep(Tsample_physics)
-# disable real-time simulation, we want to step through the
-# physics ourselves with p.stepSimulation()
-p.setRealTimeSimulation(0)
-#p.setAdditionalSearchPath("~/Documents/research/quadcopter_sim/")
-#planeId = p.loadURDF("plane.urdf",[0,0,0],p.getQuaternionFromEuler([0,0,0]))
-quadcopterId = p.loadURDF("quadrotor.urdf",[0,0,1],p.getQuaternionFromEuler([0,0,0]))
-#p.setAdditionalSearchPath(pybullet_data.getDataPath())
-planeId = p.loadURDF("plane.urdf",[0,0,0],p.getQuaternionFromEuler([0,0,0]))
-#planeId = p.loadURDF("plane.urdf")
-# do a few steps to start simulation and let the quadcopter land safely
-# for i in range(int(2/Tsample_physics)):
-#     p.stepSimulation()
+    # creation of pyqtgraph 3D graphics window
+    # with a ground plane and coordinate frame (global axis)
+    #Actual code issues error. "QWidget: Must construct a QApplication before a QWidget"
+    # app = QtGui.QApplication([])
+    # window = gl.GLViewWidget()
+    # window.show()
+    # window.setWindowTitle('Bullet Physics example')
+    # grid = gl.GLGridItem()
+    # window.addItem(grid)
+    # global_axis = gl.GLAxisItem()
+    # global_axis.updateGLOptions({'glLineWidth':(4,)})
+    # window.addItem(global_axis)
+    # window.update()
 
-# create a pyqtgraph mesh from the quadcopter to visualize
-# the quadcopter in the 3D pyqtgraph window
-# quadcopterMesh = bullet2pyqtgraph(quadcopterId)[0]
-# window.addItem(quadcopterMesh)
-# window.update()
+    # configure pybullet and load plane.urdf and quadcopter.urdf
 
-# Initialize PID controller gains:
-Kp = np.zeros(6)
-Ki = np.zeros(6)
-Kd = np.zeros(6)
+    #planeId = p.loadURDF("plane.urdf")
+    # do a few steps to start simulation and let the quadcopter land safely
+    # for i in range(int(2/Tsample_physics)):
+    #     p.stepSimulation()
 
-# give them values:osition) and quaternion_meas (measured
-    # orientation), the function returns the forces for the 4 actuators and
-    # the moment for the yaw-control
-# x-y-z controlers:
-Kp[0] = 0.00
-Kp[1] = 0.00
-Kp[2] = 0.00
+    # create a pyqtgraph mesh from the quadcopter to visualize
+    # the quadcopter in the 3D pyqtgraph window
+    # quadcopterMesh = bullet2pyqtgraph(quadcopterId)[0]
+    # window.addItem(quadcopterMesh)
+    # window.update()
 
-Kd[0] = 0.00
-Kd[1] = 0.00
-Kd[2] = 0.00
+    # Initialize PID controller gains:
 
-Ki[0] = 0
-Ki[1] = 0
-Ki[2] = 0.0000000
 
-# roll-pitch-yaw controlers (yaw is already prefilled):
-Kp[3] = 0.1
-Kp[4] = 0.1
-Kp[5] = 0.000
+    # create the quadcopter control (i.e. the autopilot) object
+    # which is named qcc
 
-Kd[3] = 0.01
-Kd[4] = 0
-Kd[5] = 0.00
 
-Ki[3] = 0
-Ki[4] = 0
-Ki[5] = 0
+    # start the update_physics that updates both physics and control
+    # in a separate thread
+    # this allows us to let the physics+control simulation run
+    # completely in the background and we keep a python command line
+    # which can be used to interact with the quadcopter
+    # e.g. we can manually change setpoints and change control parameters
 
-# create the quadcopter control (i.e. the autopilot) object
-# which is named qcc
-qcc = quadcopter_control(Kp,Ki,Kd)
+    thread_physics = Thread(target=update_physics,args=(configurations.Tsample_physics,quadcopterId,qcc,configurations))
+    # # start the thread:
+    thread_physics.start()
+class Config:
+    def __init__(self):
+        self.Tsample_physics=0.01
+        self.control_subsample = 1
+        self.Tsample_control = self.control_subsample*self.Tsample_physics
+        self.Tsample_window = 0.02
+        self.gravity=9.8
+        self.arm_length=0.1
+        self.mass=0.5
+        self.Ixx=self.Iyy=0.0023
+        self.Izz=0.004
+    def setArmLength(self, newarm):
+        self.arm_length = newarm
+    def setGravityValue(self, newgravity):
+        self.gravity=newgravity
+    def setMass(self, newMass):
+        self.mass=newMass
 
-# start the update_physics that updates both physics and control
-# in a separate thread
-# this allows us to let the physics+control simulation run 
-# completely in the background and we keep a python command line
-# which can be used to interact with the quadcopter
-# e.g. we can manually change setpoints and change control parameters
 
-thread_physics = Thread(target=update_physics,args=(Tsample_physics,quadcopterId,qcc))
-# # start the thread:
-thread_physics.start()
+
 #update_physics(Tsample_physics,quadcopterId,qcc)
 # the graphics window is updated every Tsample_window seconds
 # using a timer function from the Qt GUI part of pyqtgraph

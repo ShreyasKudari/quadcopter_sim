@@ -6,6 +6,9 @@
  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
  xsi:schemaLocation="http://drake.mit.edu ../../../../pods/drake/doc/drakeURDF.xsd" name="quadrotor">
   <link name="base_link">
+    <contact>
+        <restitution value = "0.1" />
+    </contact>
     <inertial>
       <mass value="0.5"/>
       <origin xyz="0 0 0"/>
@@ -14,7 +17,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="quadrotor_base.obj" scale=".1 .1 .1"/>
+        <mesh filename="quadrotor_base.obj" scale=".15 .15 .15"/>
       </geometry>
     </visual>
     <!-- note: the original hector quadrotor urdf had a (simplified, but still complex) collision mesh, too -->

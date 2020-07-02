@@ -2,7 +2,7 @@
 <robot name="urdf_robot">
   <link name="baseLink">
   	<contact>
-      <restitution value="0.9" />
+      <restitution value="0.5" />
       <rolling_friction value="0.001"/>
       <spinning_friction value="0.001"/>
 
@@ -19,7 +19,7 @@
 				<mesh filename="updated_textured_sphere_smooth.obj" scale="0.5 0.5 0.5"/>
       </geometry>
       <material name="white">
-        <color rgba="1 1 1 1"/>
+        <color rgba="1 1 4 1"/>
       </material>
     </visual>
     <collision>
