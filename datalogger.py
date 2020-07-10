@@ -12,8 +12,6 @@ class datalogger:
     def createPlot(self):
         plt.figure(figsize = (16,4))
         plt.plot(self.x,self.y)
-        plt.ylim(-1.5,1.5)
-        plt.xlim(0,0.5)
         plt.show()
 
 

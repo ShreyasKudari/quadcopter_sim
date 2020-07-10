@@ -153,7 +153,7 @@ class quadcopter_control:
         force_pos[1] = self.y_ctrl.calc_control(self.error_pos[1])
         force_pos[2] = self.z_ctrl.calc_control(self.error_pos[2])
         # gravity compensation
-        force_pos[2] += config.gravity*config.mass
+        # force_pos[2] += config.gravity*config.mass
 
         #############################
         # math1 block               #
@@ -223,8 +223,6 @@ class quadcopter_control:
 # and evualates the control-law and updates the physics
 # (no need to change this)
 def update_physics(delay,quadcopterId,quadcopter_controller,config, graph: datalogger):
-    x = []
-    y = []
 
     while quadcopter_controller.sim:
         #start = time.perf_counter()
@@ -240,20 +238,20 @@ def update_physics(delay,quadcopterId,quadcopter_controller,config, graph: datal
         #     quadcopter_controller.sample -= 1
         pos_meas,quaternion_meas = p.getBasePositionAndOrientation(quadcopterId)
         force_act1,force_act2,force_act3,force_act4,moment_yaw = quadcopter_controller.update_control(pos_meas,quaternion_meas,config)
-        radius = 0.05
+        radius = 0.25
         ige = 1.0
         if(pos_meas[2]<5*radius):
             ige = groundEffect.groundEffect(pos_meas[2],radius)
         #print(ige)
-
+        if graph.capture:
+            graph.addpoint(pos_meas[2],force_act1[2])
         force_act1=force_act1/ige
         force_act2=force_act2/ige
         force_act3=force_act3/ige
         force_act4=force_act4/ige
 
         #capturing forces with altitude to plot
-        if graph.capture:
-            graph.addpoint(pos_meas[2],force_act1[2])
+
         # apply forces/moments from controls etc:
         # (do this each time, because forces and moments are reset to zero after a stepSimulation())
         p.applyExternalForce(quadcopterId,-1,force_act1,[config.arm_length,0.,0.], p.LINK_FRAME)
@@ -344,7 +342,7 @@ def startSimulation(configurations, qcc, quadcopterId, graph: datalogger):
     thread_physics.start()
 class Config:
     def __init__(self):
-        self.Tsample_physics=0.01 # change simulation stepping frequency
+        self.Tsample_physics=0.001 # change simulation stepping frequency
         self.control_subsample = 1
         self.Tsample_control = self.control_subsample*self.Tsample_physics
         self.Tsample_window = 0.02

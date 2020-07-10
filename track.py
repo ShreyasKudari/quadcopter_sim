@@ -11,16 +11,17 @@ Kd = np.zeros(6)
 # orientation), the function returns the forces for the 4 actuators and
 # the moment for the yaw-control
 # x-y-z controlers:
-Kp[0] = 0.001
-Kp[1] = 0.001
-Kp[2] = 0.0025
+Kp[0] = 10
+Kp[1] = 10
+Kp[2] = 10
 
-Kd[0] = 0.005
-Kd[1] = 0.005
-Kd[2] = 0.00001
+Kd[0] = 5
+Kd[1] = 5
+Kd[2] = 5
+
 Ki[0] = 0
 Ki[1] = 0
-Ki[2] = 0.0000001
+Ki[2] = 0.005
 
     # roll-pitch-yaw controlers (yaw is already prefilled):
 Kp[3] = 0.1
@@ -51,7 +52,7 @@ planeId = p.loadURDF("plane.urdf", [0, 0, 0], p.getQuaternionFromEuler([0, 0, 0]
 targets1 = [np.array([0, 0, 0]), np.array([0, 0, 3]), np.array([9,0,3]), np.array([9,9,3]),
            np.array([-9,9,3]),np.array([-9,-9,3]),np.array([9,-9,3]), np.array([0,0,0])]
 targets0 = [np.array([0,0,3]), np.array([1,2,2]), np.array([-1,-2,4]),np.array([3,3,1])]
-targets2 = [np.array([0,0,3]),np.array([0,0,0.5]),np.array([0,0,0.3]),np.array([0,0,0.2])]
+targets2 = [np.array([0,0,3])]
 targets=targets2
 
 graph = datalogger.datalogger()
