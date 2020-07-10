@@ -26,6 +26,9 @@ import numpy as np
 from math import atan2, acos, asin
 # import pybullet for physics simulation
 import pybullet as p
+import datalogger
+import matplotlib.pyplot as plt
+import groundEffect
 import pybullet_data
 # import Thread from threading to create threads
 # threads are parts of a program than run parallel to eachother
@@ -142,7 +145,7 @@ class quadcopter_control:
         R_meas   = quaternion2rotation_matrix(quaternion_meas)
         rpy_meas = p.getEulerFromQuaternion(quaternion_meas)
 
-        self.error_pos  = self.ref_pos - pos_meas
+        self.error_pos  = (self.ref_pos - pos_meas)
 
         # calc. desired force in global x,y,z coordinates:
         force_pos = np.zeros(3)
@@ -162,13 +165,14 @@ class quadcopter_control:
         #  force_pos_local[2] = thrust, so for each actuator one quarter
         quarter_thrust = 0.25*force_pos_local[2]
 
+
         if sign_z == 0: sign_z = 1
         norm_F = np.linalg.norm(force_pos)
         # following equations only hold for yaw = 0!
         self.ref_rpy[0] = asin(-sign_z*force_pos[1]/norm_F)
         self.ref_rpy[1] = atan2(sign_z*force_pos[0], sign_z*force_pos[2])
         # setpoint for yaw = 0:
-        self.ref_rpy[2] = 0.
+        self.ref_rpy[2] = 0.0
         # to enhance robustness, do not let absolute reference angle be greater
         # than 30 degrees (pi/6 radians)
         if self.ref_rpy[0] < -np.pi/6: self.ref_rpy[0] = -np.pi/6
@@ -218,7 +222,10 @@ class quadcopter_control:
 # this function is repeatedly evaluated in a separate thread
 # and evualates the control-law and updates the physics
 # (no need to change this)
-def update_physics(delay,quadcopterId,quadcopter_controller,config):
+def update_physics(delay,quadcopterId,quadcopter_controller,config, graph: datalogger):
+    x = []
+    y = []
+
     while quadcopter_controller.sim:
         #start = time.perf_counter()
         #start = time.clock()
@@ -233,6 +240,20 @@ def update_physics(delay,quadcopterId,quadcopter_controller,config):
         #     quadcopter_controller.sample -= 1
         pos_meas,quaternion_meas = p.getBasePositionAndOrientation(quadcopterId)
         force_act1,force_act2,force_act3,force_act4,moment_yaw = quadcopter_controller.update_control(pos_meas,quaternion_meas,config)
+        radius = 0.05
+        ige = 1.0
+        if(pos_meas[2]<5*radius):
+            ige = groundEffect.groundEffect(pos_meas[2],radius)
+        #print(ige)
+
+        force_act1=force_act1/ige
+        force_act2=force_act2/ige
+        force_act3=force_act3/ige
+        force_act4=force_act4/ige
+
+        #capturing forces with altitude to plot
+        if graph.capture:
+            graph.addpoint(pos_meas[2],force_act1[2])
         # apply forces/moments from controls etc:
         # (do this each time, because forces and moments are reset to zero after a stepSimulation())
         p.applyExternalForce(quadcopterId,-1,force_act1,[config.arm_length,0.,0.], p.LINK_FRAME)
@@ -272,7 +293,7 @@ def update_physics(delay,quadcopterId,quadcopter_controller,config):
 ################################################################################
 
 
-def startSimulation(configurations, qcc, quadcopterId):
+def startSimulation(configurations, qcc, quadcopterId, graph: datalogger):
     # Definition of update times (in sec.) for quadcopter physics, controller and
     # window refreshing
 
@@ -318,12 +339,12 @@ def startSimulation(configurations, qcc, quadcopterId):
     # which can be used to interact with the quadcopter
     # e.g. we can manually change setpoints and change control parameters
 
-    thread_physics = Thread(target=update_physics,args=(configurations.Tsample_physics,quadcopterId,qcc,configurations))
+    thread_physics = Thread(target=update_physics,args=(configurations.Tsample_physics,quadcopterId,qcc,configurations,graph))
     # # start the thread:
     thread_physics.start()
 class Config:
     def __init__(self):
-        self.Tsample_physics=0.01
+        self.Tsample_physics=0.01 # change simulation stepping frequency
         self.control_subsample = 1
         self.Tsample_control = self.control_subsample*self.Tsample_physics
         self.Tsample_window = 0.02

@@ -1,7 +1,7 @@
 import quadcopter_sim
 import numpy as np
 import pybullet as p
-
+import datalogger
 configurations = quadcopter_sim.Config()
 Kp = np.zeros(6)
 Ki = np.zeros(6)
@@ -13,11 +13,11 @@ Kd = np.zeros(6)
 # x-y-z controlers:
 Kp[0] = 0.001
 Kp[1] = 0.001
-Kp[2] = 0.01
+Kp[2] = 0.0025
 
-Kd[0] = 0.001
-Kd[1] = 0.001
-Kd[2] = 0.001
+Kd[0] = 0.005
+Kd[1] = 0.005
+Kd[2] = 0.00001
 Ki[0] = 0
 Ki[1] = 0
 Ki[2] = 0.0000001
@@ -38,6 +38,7 @@ qcc = quadcopter_sim.quadcopter_control(Kp,Ki,Kd, configurations)
 physicsClient = p.connect(p.GUI)  # pybullet only for computations no visualisation
 p.setGravity(0, 0, -configurations.gravity)
 p.setTimeStep(configurations.Tsample_physics)
+
 # disable real-time simulation, we want to step through the
 # physics ourselves with p.stepSimulation()
 p.setRealTimeSimulation(0)
@@ -47,17 +48,21 @@ quadcopterId = p.loadURDF("quadrotor.urdf", [0, 0, 1], p.getQuaternionFromEuler(
 # p.setAdditionalSearchPath(pybullet_data.getDataPath())
 planeId = p.loadURDF("plane.urdf", [0, 0, 0], p.getQuaternionFromEuler([0, 0, 0]))
 
-targets = [np.array([0, 0, 0]), np.array([0, 0, 3]), np.array([9,0,3]), np.array([9,9,3]),
-           np.array([-9,9,3]),np.array([-9,-9,3]),np.array([9,-9,3])]
+targets1 = [np.array([0, 0, 0]), np.array([0, 0, 3]), np.array([9,0,3]), np.array([9,9,3]),
+           np.array([-9,9,3]),np.array([-9,-9,3]),np.array([9,-9,3]), np.array([0,0,0])]
+targets0 = [np.array([0,0,3]), np.array([1,2,2]), np.array([-1,-2,4]),np.array([3,3,1])]
+targets2 = [np.array([0,0,3]),np.array([0,0,0.5]),np.array([0,0,0.3]),np.array([0,0,0.2])]
+targets=targets2
 
-quadcopter_sim.startSimulation(configurations, qcc, quadcopterId)
+graph = datalogger.datalogger()
+quadcopter_sim.startSimulation(configurations, qcc, quadcopterId, graph)
 i = 0
 while i < len(targets):
     qcc.ref_pos = targets[i]
-    pos_meas, _ = p.getBasePositionAndOrientation(quadcopterId)
-    while (any(abs(pos_meas - qcc.ref_pos) > np.array([0.05, 0.05, 0.06]))):
+    pos_meas, orientation_meas = p.getBasePositionAndOrientation(quadcopterId)
+    while (any(abs(pos_meas - qcc.ref_pos) > np.array([0.05, 0.05, 0.3]))):
         pos_meas, _ = p.getBasePositionAndOrientation(quadcopterId)
-        print(pos_meas)
+        #print(p.getEulerFromQuaternion(orientation_meas))
         print("not there yet")
     print("moving to next target")
     i += 1

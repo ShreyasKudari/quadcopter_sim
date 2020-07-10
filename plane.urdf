@@ -3,7 +3,7 @@
   <link name="planeLink">
   <contact>
       <lateral_friction value="1.5"/>
-      <restitution value = "0.50"/>
+      <restitution value = "1"/>
   </contact>
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
