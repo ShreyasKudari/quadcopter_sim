@@ -19,17 +19,17 @@ Kd[0] = 5
 Kd[1] = 5
 Kd[2] = 5
 
-Ki[0] = 0
-Ki[1] = 0
+Ki[0] = 0.0
+Ki[1] = 0.0
 Ki[2] = 0.005
 
     # roll-pitch-yaw controlers (yaw is already prefilled):
-Kp[3] = 0.1
-Kp[4] = 0.1
+Kp[3] = 2
+Kp[4] = 2
 Kp[5] = 0.000
 
-Kd[3] = 0.01
-Kd[4] = 0
+Kd[3] = 1.3
+Kd[4] = 1.3
 Kd[5] = 0.00
 
 Ki[3] = 0

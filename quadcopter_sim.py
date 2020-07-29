@@ -153,7 +153,7 @@ class quadcopter_control:
         force_pos[1] = self.y_ctrl.calc_control(self.error_pos[1])
         force_pos[2] = self.z_ctrl.calc_control(self.error_pos[2])
         # gravity compensation
-        # force_pos[2] += config.gravity*config.mass
+        force_pos[2] += config.gravity*config.mass
 
         #############################
         # math1 block               #
@@ -237,18 +237,36 @@ def update_physics(delay,quadcopterId,quadcopter_controller,config, graph: datal
         # else:
         #     quadcopter_controller.sample -= 1
         pos_meas,quaternion_meas = p.getBasePositionAndOrientation(quadcopterId)
+        rotmat = quaternion2rotation_matrix(quaternion_meas)
+        front = np.array([pos_meas[0] + 0.1750, pos_meas[1], pos_meas[2]])
+        back = np.array([pos_meas[0] - 0.1750, pos_meas[1], pos_meas[2]])
+        left = np.array([pos_meas[0], pos_meas[1] + 0.1750, pos_meas[2]])
+        right = np.array([pos_meas[0], pos_meas[1] - 0.1750, pos_meas[2]])
+
+        front_meas = np.dot(rotmat.T, front.reshape(3, 1)).reshape(3)
+        back_meas = np.dot(rotmat.T, back.reshape(3, 1)).reshape(3)
+        left_meas = np.dot(rotmat.T, left.reshape(3, 1)).reshape(3)
+        right_meas = np.dot(rotmat.T, right.reshape(3, 1)).reshape(3)
+
         force_act1,force_act2,force_act3,force_act4,moment_yaw = quadcopter_controller.update_control(pos_meas,quaternion_meas,config)
         radius = 0.25
-        ige = 1.0
-        if(pos_meas[2]<5*radius):
-            ige = groundEffect.groundEffect(pos_meas[2],radius)
-        #print(ige)
+        ige_force1 = ige_force2 = ige_force3 = ige_force4 = 1.0
+
+        if(front_meas[2]<5*radius):
+            ige_force1 = groundEffect.groundEffect(front_meas[2],radius)
+        if(back_meas[2] < 5 * radius):
+            ige_force3 = groundEffect.groundEffect(back_meas[2], radius)
+        if (left_meas[2] < 5 * radius):
+            ige_force2 = groundEffect.groundEffect(left_meas[2], radius)
+        if (back_meas[2] < 5 * radius):
+            ige_force4 = groundEffect.groundEffect(right_meas[2], radius)
+
         if graph.capture:
             graph.addpoint(pos_meas[2],force_act1[2])
-        force_act1=force_act1/ige
-        force_act2=force_act2/ige
-        force_act3=force_act3/ige
-        force_act4=force_act4/ige
+        force_act1=force_act1/ige_force1
+        force_act2=force_act2/ige_force2
+        force_act3=force_act3/ige_force3
+        force_act4=force_act4/ige_force4
 
         #capturing forces with altitude to plot
 
@@ -347,8 +365,8 @@ class Config:
         self.Tsample_control = self.control_subsample*self.Tsample_physics
         self.Tsample_window = 0.02
         self.gravity=9.8
-        self.arm_length=0.1
-        self.mass=0.5
+        self.arm_length=0.1750
+        self.mass=5
         self.Ixx=self.Iyy=0.0023
         self.Izz=0.004
     def setArmLength(self, newarm):

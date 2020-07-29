@@ -10,7 +10,7 @@
         <restitution value = "0.7" />
     </contact>
     <inertial>
-      <mass value="0.5"/>
+      <mass value="5"/>
       <origin xyz="0 0 0"/>
       <inertia ixx="0.0023" ixy="0.0" ixz="0.0" iyy="0.0023" iyz="0.0" izz="0.004"/>
     </inertial>
